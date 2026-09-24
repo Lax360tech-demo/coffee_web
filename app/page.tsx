@@ -32,7 +32,19 @@ export default function Home() {
     return () => clearTimeout(safetyTimer);
   }, []);
 
+  const [selectedProductForEnquiry, setSelectedProductForEnquiry] = useState<string>("");
+
   const handleOrderScroll = () => {
+    // Reset product selection so placeholder 'Select a product' displays
+    setSelectedProductForEnquiry("");
+    const target = document.querySelector("#contact");
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleProductEnquire = (productName: string) => {
+    setSelectedProductForEnquiry(productName);
     const target = document.querySelector("#contact");
     if (target) {
       target.scrollIntoView({ behavior: "smooth" });
@@ -102,13 +114,16 @@ export default function Home() {
 
       <CoffeeDetails />
 
-      <CraftSection />
+      <CraftSection onEnquire={handleProductEnquire} />
 
       <ManufacturingSection />
 
       <GallerySection />
 
-      <ContactSection />
+      <ContactSection
+        selectedProduct={selectedProductForEnquiry}
+        onClearProduct={() => setSelectedProductForEnquiry("")}
+      />
 
       <Footer />
     </main>

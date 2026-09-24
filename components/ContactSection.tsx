@@ -19,19 +19,55 @@ interface FormData {
   name: string;
   email: string;
   phone: string;
+  productEnquiry: string;
   message: string;
 }
 
-export const ContactSection: React.FC = () => {
+interface ContactSectionProps {
+  selectedProduct?: string;
+  onClearProduct?: () => void;
+}
+
+export const ContactSection: React.FC<ContactSectionProps> = ({
+  selectedProduct = "",
+  onClearProduct,
+}) => {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
     phone: "",
+    productEnquiry: selectedProduct || "",
     message: "",
   });
 
+  const [lastEnquiredProduct, setLastEnquiredProduct] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Sync with prop when passed
+  React.useEffect(() => {
+    if (selectedProduct !== undefined) {
+      setFormData((prev) => ({ ...prev, productEnquiry: selectedProduct }));
+    }
+  }, [selectedProduct]);
+
+  // Decoupled window event listener for seamless product enquiry triggers
+  React.useEffect(() => {
+    const handleCustomProductEnquire = (event: Event) => {
+      const customEvent = event as CustomEvent<{ productName: string }>;
+      if (customEvent.detail && customEvent.detail.productName) {
+        setFormData((prev) => ({
+          ...prev,
+          productEnquiry: customEvent.detail.productName,
+        }));
+      }
+    };
+
+    window.addEventListener("narasus-product-enquire", handleCustomProductEnquire);
+    return () => {
+      window.removeEventListener("narasus-product-enquire", handleCustomProductEnquire);
+    };
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -40,10 +76,16 @@ export const ContactSection: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleClearProduct = () => {
+    setFormData((prev) => ({ ...prev, productEnquiry: "" }));
+    if (onClearProduct) onClearProduct();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) return;
 
+    setLastEnquiredProduct(formData.productEnquiry);
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
@@ -52,8 +94,10 @@ export const ContactSection: React.FC = () => {
         name: "",
         email: "",
         phone: "",
+        productEnquiry: "",
         message: "",
       });
+      if (onClearProduct) onClearProduct();
     }, 800);
   };
 
@@ -217,7 +261,9 @@ export const ContactSection: React.FC = () => {
                     Enquiry Received!
                   </h4>
                   <p className="text-xs sm:text-sm text-cream/80 max-w-md mb-6 leading-relaxed">
-                    Thank you for reaching out to Narasu&apos;s Coffee. Our team will review your message and contact you within 2 business hours.
+                    {lastEnquiredProduct
+                      ? `Thank you for your enquiry about ${lastEnquiredProduct}. Our team will review your order details and contact you within 2 business hours.`
+                      : `Thank you for reaching out to Narasu's Coffee. Our team will review your message and contact you within 2 business hours.`}
                   </p>
                   <button
                     onClick={() => setIsSubmitted(false)}
@@ -228,6 +274,46 @@ export const ContactSection: React.FC = () => {
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Product Enquiry Input */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label
+                        htmlFor="contact-product"
+                        className="block text-[11px] font-bold uppercase tracking-wider text-cream/90"
+                      >
+                        Product Enquiry
+                      </label>
+                      {formData.productEnquiry && (
+                        <button
+                          type="button"
+                          onClick={handleClearProduct}
+                          className="text-[10px] text-[#C49A6C] hover:text-[#EAD7C3] underline transition-colors"
+                        >
+                          Clear Selection
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative flex items-center">
+                      <div className="absolute left-4 text-[#C49A6C]/80 pointer-events-none">
+                        <Coffee className="w-4 h-4" />
+                      </div>
+                      <input
+                        id="contact-product"
+                        type="text"
+                        name="productEnquiry"
+                        value={formData.productEnquiry}
+                        readOnly
+                        placeholder="Select a product"
+                        className="w-full pl-11 pr-24 py-3.5 rounded-xl bg-[#080503]/80 border border-[#6F4E37]/45 text-xs sm:text-sm text-[#EAD7C3] font-medium placeholder:text-cream/35 focus:outline-none focus:border-[#C49A6C] focus:ring-1 focus:ring-[#C49A6C] transition-all shadow-inner cursor-default"
+                      />
+                      {formData.productEnquiry && (
+                        <span className="absolute right-3 text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#21100A] border border-[#C49A6C]/40 text-[#C49A6C]">
+                          Selected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Name Input */}
                   <div>
                     <label

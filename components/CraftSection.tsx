@@ -397,7 +397,11 @@ const PRODUCTS: ProductItem[] = [
   },
 ];
 
-export const ProductsSection: React.FC = () => {
+export interface CraftSectionProps {
+  onEnquire?: (productName: string) => void;
+}
+
+export const ProductsSection: React.FC<CraftSectionProps> = ({ onEnquire }) => {
   const [selectedCategory, setSelectedCategory] = useState<"coffee" | "tea" | "food" | "rudhram">("coffee");
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
   const [enquiryNotification, setEnquiryNotification] = useState<string | null>(null);
@@ -410,11 +414,21 @@ export const ProductsSection: React.FC = () => {
 
   const handleEnquire = (product: ProductItem) => {
     setEnquiryNotification(
-      `Enquiry started for ${product.name} (${product.weight})! Let us know your requirements below.`
+      `Product enquiry set to: ${product.name}! Redirecting to Contact form...`
     );
-    const target = document.querySelector("#contact");
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth" });
+    if (onEnquire) {
+      onEnquire(product.name);
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("narasus-product-enquire", {
+          detail: { productName: product.name },
+        })
+      );
+      const target = document.querySelector("#contact");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth" });
+      }
     }
     setTimeout(() => setEnquiryNotification(null), 4000);
   };
@@ -624,7 +638,7 @@ export const ProductsSection: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card Footer: Price, Details & Enquire Now */}
+                {/* Card Footer: Price, Savings & View Details */}
                 <div className="pt-4 border-t border-[#6F4E37]/30">
                   <div className="flex items-baseline justify-between mb-3.5">
                     <div className="flex items-baseline gap-2">
@@ -640,22 +654,14 @@ export const ProductsSection: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Details + Enquire Now buttons (No Buy Now) */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setSelectedProduct(product)}
-                      className="w-full py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-cream/80 hover:text-white bg-[#21100A] hover:bg-[#33180F] border border-[#6F4E37]/40 transition-all text-center"
-                    >
-                      Details
-                    </button>
-                    <button
-                      onClick={() => handleEnquire(product)}
-                      className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-r from-[#6F4E37] to-[#855D42] hover:from-[#855D42] hover:to-[#A37453] shadow-[0_4px_15px_rgba(111,78,55,0.4)] hover:scale-102 active:scale-98 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 text-[#EAD7C3]" />
-                      Enquire Now
-                    </button>
-                  </div>
+                  {/* View Details button - Enquire Now removed per user request */}
+                  <button
+                    onClick={() => setSelectedProduct(product)}
+                    className="w-full py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-cream/85 hover:text-white bg-[#21100A] hover:bg-[#33180F] border border-[#6F4E37]/40 hover:border-[#C49A6C]/60 transition-all text-center flex items-center justify-center gap-2 group-hover:bg-[#2A140D]"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-[#C49A6C]" />
+                    <span>View Details</span>
+                  </button>
                 </div>
               </motion.div>
             ))}
@@ -679,8 +685,16 @@ export const ProductsSection: React.FC = () => {
           </div>
           <button
             onClick={() => {
-              const target = document.querySelector("#contact");
-              if (target) target.scrollIntoView({ behavior: "smooth" });
+              if (onEnquire) onEnquire("Custom Bulk Order / Wholesale");
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                  new CustomEvent("narasus-product-enquire", {
+                    detail: { productName: "Custom Bulk Order / Wholesale" },
+                  })
+                );
+                const target = document.querySelector("#contact");
+                if (target) target.scrollIntoView({ behavior: "smooth" });
+              }
             }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest text-white bg-[#6F4E37] hover:bg-[#855D42] transition-colors flex-shrink-0"
           >
