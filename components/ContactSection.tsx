@@ -13,7 +13,9 @@ import {
   User,
   MessageSquare,
   Coffee,
+  ChevronDown,
 } from "lucide-react";
+import { PRODUCTS, CATEGORIES } from "@/components/CraftSection";
 
 interface FormData {
   name: string;
@@ -70,7 +72,9 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   }, []);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -274,43 +278,76 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  {/* Product Enquiry Input */}
+                  {/* Select Product Dropdown */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label
-                        htmlFor="contact-product"
-                        className="block text-[11px] font-bold uppercase tracking-wider text-cream/90"
-                      >
-                        Product Enquiry
-                      </label>
-                      {formData.productEnquiry && (
-                        <button
-                          type="button"
-                          onClick={handleClearProduct}
-                          className="text-[10px] text-[#C49A6C] hover:text-[#EAD7C3] underline transition-colors"
-                        >
-                          Clear Selection
-                        </button>
-                      )}
-                    </div>
+                    <label
+                      htmlFor="contact-product"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-cream/90 mb-2"
+                    >
+                      Select Product
+                    </label>
                     <div className="relative flex items-center">
-                      <div className="absolute left-4 text-[#C49A6C]/80 pointer-events-none">
+                      <div className="absolute left-4 text-[#C49A6C]/80 pointer-events-none z-10">
                         <Coffee className="w-4 h-4" />
                       </div>
-                      <input
+                      <select
                         id="contact-product"
-                        type="text"
                         name="productEnquiry"
                         value={formData.productEnquiry}
-                        readOnly
-                        placeholder="Select a product"
-                        className="w-full pl-11 pr-24 py-3.5 rounded-xl bg-[#080503]/80 border border-[#6F4E37]/45 text-xs sm:text-sm text-[#EAD7C3] font-medium placeholder:text-cream/35 focus:outline-none focus:border-[#C49A6C] focus:ring-1 focus:ring-[#C49A6C] transition-all shadow-inner cursor-default"
-                      />
-                      {formData.productEnquiry && (
-                        <span className="absolute right-3 text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#21100A] border border-[#C49A6C]/40 text-[#C49A6C]">
-                          Selected
-                        </span>
-                      )}
+                        onChange={handleChange}
+                        className="w-full pl-11 pr-10 py-3.5 rounded-xl bg-[#080503]/80 border border-[#6F4E37]/45 text-xs sm:text-sm text-white focus:outline-none focus:border-[#C49A6C] focus:ring-1 focus:ring-[#C49A6C] transition-all shadow-inner appearance-none cursor-pointer"
+                      >
+                        <option value="" className="bg-[#120A06] text-cream/40">
+                          Select a Product
+                        </option>
+                        {CATEGORIES.map((cat) => {
+                          const catProducts = PRODUCTS.filter(
+                            (p) => p.category === cat.id
+                          );
+                          if (catProducts.length === 0) return null;
+                          return (
+                            <optgroup
+                              key={cat.id}
+                              label={cat.name}
+                              className="bg-[#1A0C08] text-[#C49A6C] font-bold"
+                            >
+                              {catProducts.map((product) => (
+                                <option
+                                  key={product.id}
+                                  value={product.name}
+                                  className="bg-[#120A06] text-white font-normal"
+                                >
+                                  {product.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        })}
+                        <optgroup
+                          label="General / Other"
+                          className="bg-[#1A0C08] text-[#C49A6C] font-bold"
+                        >
+                          <option
+                            value="Custom Bulk Order / Wholesale"
+                            className="bg-[#120A06] text-white font-normal"
+                          >
+                            Custom Bulk Order / Wholesale
+                          </option>
+                        </optgroup>
+                        {formData.productEnquiry &&
+                          !PRODUCTS.some((p) => p.name === formData.productEnquiry) &&
+                          formData.productEnquiry !== "Custom Bulk Order / Wholesale" && (
+                            <option
+                              value={formData.productEnquiry}
+                              className="bg-[#120A06] text-white font-normal"
+                            >
+                              {formData.productEnquiry}
+                            </option>
+                          )}
+                      </select>
+                      <div className="absolute right-4 text-[#C49A6C]/70 pointer-events-none z-10">
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
 

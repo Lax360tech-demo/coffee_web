@@ -40,7 +40,7 @@ export interface ProductItem {
   notes: string;
 }
 
-const CATEGORIES: CategoryItem[] = [
+export const CATEGORIES: CategoryItem[] = [
   {
     id: "coffee",
     name: "Coffee",
@@ -67,7 +67,7 @@ const CATEGORIES: CategoryItem[] = [
   },
 ];
 
-const PRODUCTS: ProductItem[] = [
+export const PRODUCTS: ProductItem[] = [
   // ==================== COFFEE CATEGORY ====================
   {
     id: "gold-50g",
