@@ -67,6 +67,8 @@ export const ContactSection: React.FC = () => {
         <img
           src="/images/contact-bg.jpg"
           alt="Contact Section Background"
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover object-center"
         />
       </div>

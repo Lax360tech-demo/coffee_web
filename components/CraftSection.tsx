@@ -125,6 +125,8 @@ export const ProductsSection: React.FC = () => {
         <img
           src="/images/products-bg.jpg"
           alt="Products Background"
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover object-center"
         />
       </div>
@@ -184,6 +186,8 @@ export const ProductsSection: React.FC = () => {
                   <img
                     src={product.image}
                     alt={product.name}
+                    loading="lazy"
+                    decoding="async"
                     className="relative z-10 w-full h-full object-contain filter drop-shadow-[0_10px_25px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform duration-500"
                   />
                   <button
@@ -232,9 +236,9 @@ export const ProductsSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Card Footer: Price & CTA */}
+              {/* Card Footer: Price & Details */}
               <div className="pt-4 border-t border-[#6F4E37]/30">
-                <div className="flex items-baseline justify-between mb-3">
+                <div className="flex items-baseline justify-between mb-3.5">
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl font-black text-[#C49A6C]">
                       {product.price}
@@ -248,21 +252,12 @@ export const ProductsSection: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setSelectedProduct(product)}
-                    className="w-full py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-cream/80 hover:text-white bg-[#21100A] hover:bg-[#33180F] border border-[#6F4E37]/40 transition-all text-center"
-                  >
-                    Details
-                  </button>
-                  <button
-                    onClick={() => handleOrder(product)}
-                    className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-[#6F4E37] hover:bg-[#855D42] shadow-[0_4px_15px_rgba(111,78,55,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <ShoppingBag className="w-3.5 h-3.5" />
-                    Buy Now
-                  </button>
-                </div>
+                <button
+                  onClick={() => setSelectedProduct(product)}
+                  className="w-full py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-cream/80 hover:text-white bg-[#21100A] hover:bg-[#33180F] border border-[#6F4E37]/40 transition-all text-center"
+                >
+                  Details
+                </button>
               </div>
             </motion.div>
           ))}

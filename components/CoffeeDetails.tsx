@@ -19,6 +19,8 @@ export const CoffeeDetails: React.FC = () => {
         <img
           src="/images/our-coffee-bg.jpg"
           alt="Our Coffee Background"
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover object-center"
         />
       </div>

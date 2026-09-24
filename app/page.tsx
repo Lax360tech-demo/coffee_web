@@ -20,7 +20,7 @@ export default function Home() {
     if (loadingProgress >= 100) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 400);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [loadingProgress]);
@@ -28,7 +28,7 @@ export default function Home() {
   useEffect(() => {
     const safetyTimer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500);
+    }, 600);
     return () => clearTimeout(safetyTimer);
   }, []);
 
@@ -89,8 +89,15 @@ export default function Home() {
       <Navbar onOrderClick={handleOrderScroll} />
 
       <CoffeeProductScroll
+        onInitialReady={() => {
+          setLoadingProgress(100);
+          setIsLoading(false);
+        }}
         onLoadingProgress={(pct) => setLoadingProgress(pct)}
-        onLoaded={() => setLoadingProgress(100)}
+        onLoaded={() => {
+          setLoadingProgress(100);
+          setIsLoading(false);
+        }}
       />
 
       <CoffeeDetails />

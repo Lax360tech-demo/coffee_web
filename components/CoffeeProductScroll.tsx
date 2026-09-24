@@ -7,14 +7,17 @@ import CoffeeTextOverlays from "./CoffeeTextOverlays";
 interface CoffeeProductScrollProps {
   onLoadingProgress?: (progress: number) => void;
   onLoaded?: () => void;
+  onInitialReady?: () => void;
 }
 
 const TOTAL_FRAMES = 120;
 const imageCache: (HTMLImageElement | null)[] = new Array(TOTAL_FRAMES).fill(null);
+const inFlightRequests = new Set<number>();
 
 export const CoffeeProductScroll: React.FC<CoffeeProductScrollProps> = ({
   onLoadingProgress,
   onLoaded,
+  onInitialReady,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -22,6 +25,7 @@ export const CoffeeProductScroll: React.FC<CoffeeProductScrollProps> = ({
   const lastDrawnFrameRef = useRef<number>(-1);
   const requestedFrameRef = useRef<number>(0);
   const isLoadedRef = useRef<boolean>(false);
+  const requestFrameLoadRef = useRef<((index: number) => void) | null>(null);
 
   // Framer Motion useScroll targeting the 500vh hero container
   const { scrollYProgress } = useScroll({
@@ -83,6 +87,11 @@ export const CoffeeProductScroll: React.FC<CoffeeProductScrollProps> = ({
       const safeIndex = Math.max(0, Math.min(TOTAL_FRAMES - 1, frameIndex));
       requestedFrameRef.current = safeIndex;
 
+      // On-demand load trigger for current scroll target and immediate neighbors
+      if (requestFrameLoadRef.current) {
+        requestFrameLoadRef.current(safeIndex);
+      }
+
       const img = imageCache[safeIndex];
 
       if (img && img.complete && img.naturalWidth > 0) {
@@ -91,7 +100,7 @@ export const CoffeeProductScroll: React.FC<CoffeeProductScrollProps> = ({
         return;
       }
 
-      // Nearest loaded frame fallback across all 120 frames
+      // Nearest loaded frame fallback across all 120 frames (guarantees zero blank frames)
       let fallbackImg: HTMLImageElement | null = null;
       let minDistance = Infinity;
 
@@ -131,85 +140,146 @@ export const CoffeeProductScroll: React.FC<CoffeeProductScrollProps> = ({
     drawFrame(currentFrame);
   }, [drawFrame]);
 
-  // Preload all 120 frames
-  useEffect(() => {
-    let loadedCount = imageCache.filter(
-      (img) => img && img.complete && img.naturalWidth > 0
-    ).length;
+  // Single frame loader with deduplication and async decoding
+  const loadSingleFrame = useCallback(
+    (index: number): Promise<HTMLImageElement | null> => {
+      if (index < 0 || index >= TOTAL_FRAMES) return Promise.resolve(null);
 
-    const updateProgress = () => {
-      const pct = Math.min(100, Math.round((loadedCount / TOTAL_FRAMES) * 100));
-      if (onLoadingProgress) {
-        onLoadingProgress(pct);
+      const existing = imageCache[index];
+      if (existing && existing.complete && existing.naturalWidth > 0) {
+        return Promise.resolve(existing);
       }
-      if (loadedCount >= TOTAL_FRAMES && !isLoadedRef.current) {
-        isLoadedRef.current = true;
-        if (onLoaded) onLoaded();
-      }
-    };
 
-    const loadFrame = (index: number): Promise<void> => {
-      if (
-        imageCache[index] &&
-        imageCache[index]!.complete &&
-        imageCache[index]!.naturalWidth > 0
-      ) {
-        updateProgress();
-        return Promise.resolve();
+      if (inFlightRequests.has(index)) {
+        return Promise.resolve(null);
       }
+
+      inFlightRequests.add(index);
 
       return new Promise((resolve) => {
         const frameNumber = index + 1;
         const img = new Image();
+        img.decoding = "async";
         img.src = `/images/coffee/${frameNumber}.webp`;
 
         img.onload = () => {
           imageCache[index] = img;
-          loadedCount++;
-          updateProgress();
+          inFlightRequests.delete(index);
           if (index === 0 && lastDrawnFrameRef.current === -1) {
             drawFrame(0);
           } else if (index === requestedFrameRef.current) {
             drawFrame(index);
           }
-          resolve();
+          resolve(img);
         };
 
         img.onerror = () => {
           const fallback = new Image();
+          fallback.decoding = "async";
           fallback.src = `/images/coffee/${frameNumber}.jpg`;
           fallback.onload = () => {
             imageCache[index] = fallback;
-            loadedCount++;
-            updateProgress();
+            inFlightRequests.delete(index);
             if (index === 0 && lastDrawnFrameRef.current === -1) {
               drawFrame(0);
             } else if (index === requestedFrameRef.current) {
               drawFrame(index);
             }
-            resolve();
+            resolve(fallback);
           };
           fallback.onerror = () => {
-            loadedCount++;
-            updateProgress();
-            resolve();
+            inFlightRequests.delete(index);
+            resolve(null);
           };
         };
       });
+    },
+    [drawFrame]
+  );
+
+  // Hook on-demand scroll frame loader
+  useEffect(() => {
+    requestFrameLoadRef.current = (targetIndex: number) => {
+      const neighbors = [
+        targetIndex,
+        targetIndex + 1,
+        targetIndex + 2,
+        targetIndex + 3,
+        targetIndex - 1,
+      ];
+      for (const idx of neighbors) {
+        if (
+          idx >= 0 &&
+          idx < TOTAL_FRAMES &&
+          !imageCache[idx] &&
+          !inFlightRequests.has(idx)
+        ) {
+          loadSingleFrame(idx);
+        }
+      }
     };
+  }, [loadSingleFrame]);
+
+  // Progressive frame loading: Instant frame 0 paint, followed by non-blocking background queue
+  useEffect(() => {
+    let cancelled = false;
 
     updateCanvasSize();
 
-    // Priority load frame 1 (index 0) first for instantaneous first paint
-    loadFrame(0).then(() => {
+    // Priority 1: Load frame 0 immediately for instant Hero display
+    loadSingleFrame(0).then(() => {
+      if (cancelled) return;
       drawFrame(0);
-      const remaining = Array.from(
-        { length: TOTAL_FRAMES - 1 },
-        (_, i) => i + 1
-      );
-      Promise.all(remaining.map((idx) => loadFrame(idx)));
+
+      // Immediately signal readiness so user is not blocked
+      if (onInitialReady) onInitialReady();
+      if (onLoadingProgress) onLoadingProgress(100);
+      if (onLoaded && !isLoadedRef.current) {
+        isLoadedRef.current = true;
+        onLoaded();
+      }
+
+      // Priority 2: Progressive background loading in non-blocking batches
+      const loadProgressively = async () => {
+        // Immediate scroll buffer (frames 1 to 10)
+        for (let i = 1; i <= Math.min(10, TOTAL_FRAMES - 1); i++) {
+          if (cancelled) return;
+          await loadSingleFrame(i);
+        }
+
+        // Remaining frames in small concurrent batches of 3
+        const BATCH_SIZE = 3;
+        for (let i = 11; i < TOTAL_FRAMES; i += BATCH_SIZE) {
+          if (cancelled) return;
+          const batch: Promise<HTMLImageElement | null>[] = [];
+          for (let j = 0; j < BATCH_SIZE && i + j < TOTAL_FRAMES; j++) {
+            const idx = i + j;
+            if (!imageCache[idx] && !inFlightRequests.has(idx)) {
+              batch.push(loadSingleFrame(idx));
+            }
+          }
+          if (batch.length > 0) {
+            await Promise.all(batch);
+          }
+          // Yield to browser execution thread so scroll remains 100% fluid
+          await new Promise((resolve) => setTimeout(resolve, 30));
+        }
+      };
+
+      loadProgressively();
     });
-  }, [drawFrame, onLoaded, onLoadingProgress, updateCanvasSize]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    drawFrame,
+    loadSingleFrame,
+    onInitialReady,
+    onLoaded,
+    onLoadingProgress,
+    updateCanvasSize,
+  ]);
 
   // Framer Motion useMotionValueEvent: synchronizes frame changes on useScroll updates
   useMotionValueEvent(scrollYProgress, "change", (latest) => {

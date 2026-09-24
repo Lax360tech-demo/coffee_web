@@ -1,65 +1,65 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Factory } from "lucide-react";
 
 export const ManufacturingSection: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const section = sectionRef.current;
+    if (!section) return;
 
-    // Force muted and defaultMuted for strict browser autoplay compliance
-    video.muted = true;
-    video.defaultMuted = true;
-
-    const startPlay = () => {
-      const promise = video.play();
-      if (promise !== undefined) {
-        promise.catch((err) => {
-          console.warn("Autoplay attempt:", err);
-        });
-      }
-    };
-
-    // Attempt autoplay immediately
-    startPlay();
-
-    // Trigger as soon as metadata or frames are ready
-    video.addEventListener("loadedmetadata", startPlay);
-    video.addEventListener("canplay", startPlay);
-    video.addEventListener("loadeddata", startPlay);
-
-    // IntersectionObserver to ensure playback starts as soon as section scrolls into view
+    // IntersectionObserver to lazy-load the 9.5MB video only when approaching this section (350px margin)
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            startPlay();
+            setVideoSrc("/videos/manufacturing.mp4");
+            if (videoRef.current) {
+              const video = videoRef.current;
+              video.muted = true;
+              video.defaultMuted = true;
+              video.play().catch(() => {});
+            }
+          } else {
+            // Pause when out of view to conserve CPU/GPU
+            if (videoRef.current) {
+              videoRef.current.pause();
+            }
           }
         });
       },
-      { threshold: 0.15 }
+      { rootMargin: "350px 0px", threshold: 0.05 }
     );
 
-    observer.observe(video);
+    observer.observe(section);
 
     return () => {
-      video.removeEventListener("loadedmetadata", startPlay);
-      video.removeEventListener("canplay", startPlay);
-      video.removeEventListener("loadeddata", startPlay);
       observer.disconnect();
     };
   }, []);
 
+  useEffect(() => {
+    if (videoSrc && videoRef.current) {
+      const video = videoRef.current;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.load();
+      video.play().catch(() => {});
+    }
+  }, [videoSrc]);
+
   return (
     <section
+      ref={sectionRef}
       id="manufacturing"
       className="relative w-full min-h-[85vh] sm:min-h-[95vh] lg:min-h-[100vh] py-32 sm:py-40 px-4 sm:px-6 lg:px-8 border-t border-[#6F4E37]/30 overflow-hidden flex items-center justify-center scroll-mt-16"
     >
-      {/* Cinematic Full-Width Background Video - Continuous Muted Autoplay Loop with No Controls */}
+      {/* Cinematic Full-Width Background Video - Lazy-loaded, Continuous Muted Autoplay Loop with No Controls */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <video
           ref={videoRef}
@@ -68,10 +68,10 @@ export const ManufacturingSection: React.FC = () => {
           muted
           playsInline
           controls={false}
-          preload="auto"
+          preload="none"
           className="w-full h-full object-cover object-center"
         >
-          <source src="/videos/manufacturing.mp4" type="video/mp4" />
+          {videoSrc && <source src={videoSrc} type="video/mp4" />}
           Your browser does not support the video tag.
         </video>
 

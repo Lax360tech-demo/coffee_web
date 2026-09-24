@@ -91,6 +91,8 @@ export const GallerySection: React.FC = () => {
         <img
           src="/images/gallery-bg.jpg"
           alt="Coffee Gallery Background"
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover object-center"
         />
       </div>
@@ -166,6 +168,7 @@ export const GallerySection: React.FC = () => {
                     alt={item.title}
                     className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 ease-out"
                     loading="lazy"
+                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#120A06] via-transparent to-transparent opacity-80" />
 
